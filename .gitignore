@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Logs
+npm-debug.log*
+*.log
+
+# Local env & secrets
+.env.local
+.env.*.local
+
+# MCP hub runtime config (may contain server URLs/tokens)
+mcp-hub.config.json
+mcp-hub.config.local.json
+
+# Local agent tooling / skills scaffolding (not part of the app)
+agent/
+.agents/
+skills-lock.json

@@ -1,0 +1,295 @@
+:root {
+  --app-header-height: 3.5rem;
+
+  /* App accent: a deep teal, applied to the header and (via calcite's brand
+     tokens) to primary/ask buttons across the app and the assistant. */
+  --app-teal: #0e5b62;
+  --calcite-color-brand: #0e5b62;
+  --calcite-color-brand-hover: #0a474d;
+  --calcite-color-brand-press: #073439;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app__header {
+  height: var(--app-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  background: var(--app-teal);
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.app__header h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+
+.app__header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.app__body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+.app__map {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+}
+
+arcgis-map {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Give the map's tools (search, expand toggles) breathing room from the map
+   edge and from each other, to match the floating selection panel. Shrink-wrap
+   the hosts so they never stretch into full-width lines across the map. */
+.app__map arcgis-search,
+.app__map arcgis-expand,
+.app__map arcgis-zoom {
+  margin: 0.5rem;
+  width: fit-content;
+  height: fit-content;
+}
+
+/* Selection count overlay on the map */
+.selection-panel {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 1.75rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 0.85rem;
+}
+
+.selection-panel__count {
+  color: #323232;
+}
+
+.selection-panel__clear {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #0079c1;
+  background: #fff;
+  color: #0079c1;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.app__assistant {
+  flex: 0 0 24rem;
+  border-left: 1px solid #d0d0d0;
+  min-width: 0;
+}
+
+arcgis-assistant {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.app__center {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* MCP server manager panel */
+.mcp-panel {
+  position: absolute;
+  top: calc(var(--app-header-height) + 0.5rem);
+  right: 25rem;
+  width: 22rem;
+  max-height: calc(100% - var(--app-header-height) - 1.5rem);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* About/info panel reuses the mcp-panel chrome, anchored to the top-right. */
+.info-panel {
+  right: 0.75rem;
+  width: 20rem;
+}
+
+.mcp-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.mcp-panel__header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.mcp-panel__close {
+  border: none;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mcp-panel__body {
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+.mcp-panel__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.mcp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.mcp-field input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #c0c0c0;
+  border-radius: 3px;
+  font-size: 0.9rem;
+}
+
+.mcp-add,
+.mcp-remove {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #0079c1;
+  background: #0079c1;
+  color: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.mcp-add:disabled,
+.mcp-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mcp-remove {
+  background: #fff;
+  color: #d83020;
+  border-color: #d83020;
+}
+
+.mcp-error {
+  color: #d83020;
+  font-size: 0.8rem;
+  margin: 0.5rem 0 0;
+}
+
+.mcp-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mcp-list__empty {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.mcp-list__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 3px;
+}
+
+.mcp-list__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  min-width: 0;
+}
+
+.mcp-url {
+  color: #666;
+  word-break: break-all;
+}
+
+.mcp-status {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.05rem 0.4rem;
+  border-radius: 2px;
+  color: #fff;
+}
+
+.mcp-status--connected {
+  background: #35ac46;
+}
+
+.mcp-status--connecting {
+  background: #d9a000;
+}
+
+.mcp-status--error {
+  background: #d83020;
+}

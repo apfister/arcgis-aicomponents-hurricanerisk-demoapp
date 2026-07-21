@@ -1,0 +1,42 @@
+{
+  "name": "hurricanerisk_ngsdemo_aicomponents",
+  "version": "1.0.0",
+  "description": "Agentic hurricane-risk mapping app: ArcGIS assistant + find-similar agent + MCP passthrough",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "hub": "tsx hub/server.ts",
+    "hub:dev": "tsx watch hub/server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@arcgis/ai-components": "^5.1.7",
+    "@arcgis/ai-orchestrator": "^5.0.19",
+    "@arcgis/core": "^5.1.7",
+    "@arcgis/map-components": "^5.1.7",
+    "@esri/calcite-components": "^5.1.1",
+    "@langchain/core": "^1.2.1",
+    "@langchain/langgraph": "^1.4.7",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.2"
+  }
+}
