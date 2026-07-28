@@ -68,7 +68,7 @@ can read from and draw on the live map. Each is created with `createLLMAgent` /
 | ------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Find-similar**         | [findSimilarAgent.ts](src/agents/findSimilarAgent.ts)   | From selected hex bins, builds a mean query vector, scores every hex bin in the current extent by cosine similarity, and highlights the closest matches. A client-side reimplementation of ArcGIS Pro's _Find Similar_. |
 | **Demographics**         | [demographicsAgent.ts](src/agents/demographicsAgent.ts) | Describes a selected hex bin's human-readable risk and vulnerability factors, and what a selection has in common.                                                                                                       |
-| **Living Atlas**         | [livingAtlasAgent.ts](src/agents/livingAtlasAgent.ts)   | Adds live Living Atlas layers from a curated catalog by plain-language request, with a confirm-before-add flow.                                                                                                         |
+| **Living Atlas**         | [livingAtlasAgent.ts](src/agents/livingAtlasAgent.ts)   | Searches the entire live ArcGIS Living Atlas by plain-language request and adds a chosen layer, with a confirm-before-add flow.                                                                                         |
 | **Navigate to bookmark** | [bookmarkAgent.ts](src/agents/bookmarkAgent.ts)         | Flies the map to a saved bookmark by plain-language name.                                                                                                                                                               |
 | **MCP passthrough**      | [mcpAgent.ts](src/agents/mcpAgent.ts)                   | Bridges the assistant to external tools served through the app's MCP hub.                                                                                                                                               |
 
@@ -78,22 +78,34 @@ imperatively: create an `<arcgis-assistant-agent>` element, assign its
 
 ### Note: Living Atlas agent workaround
 
-The Living Atlas agent adds layers from a curated
-[catalog](src/utils/livingAtlas.ts) of ArcGIS **portal item IDs**. The obvious
-design — hand the LLM the item IDs and let it call an "add by ID" tool — leaks
-those opaque IDs into the chat and invites the model to hallucinate or mangle them.
+The Living Atlas agent searches the **entire** ArcGIS Living Atlas live
+([`searchLivingAtlas`](src/utils/livingAtlas.ts)) rather than a hardcoded list. It
+scopes results to genuine Living Atlas content using the item field
+`groupDesignations:livingatlas` — the owner-independent flag behind the "Living
+Atlas" badge — plus a mappable-layer type filter, ordered by relevance.
 
-The workaround: the agent never sees item IDs. Its `searchLivingAtlasLayers` tool
-returns only human-readable **titles and summaries**, and its `addLivingAtlasLayer`
-tool takes an exact **layer title**, which is resolved back to a portal item ID in
-code ([`findCatalogByTitle`](src/utils/livingAtlas.ts)) before the layer is added.
-The agent's prompt also forbids surfacing internal IDs. This keeps the model
-constrained to the curated catalog — it can't invent an item ID or add anything
-outside the list — and keeps the conversation clean.
+The obvious add design — hand the LLM each result's **portal item ID** and let it
+call an "add by ID" tool — leaks opaque 32-char IDs into the chat and invites the
+model to hallucinate or mangle them. That risk is worse with live search, where
+titles also collide (there are several items literally titled "Active Hurricanes,
+Cyclones and Typhoons").
 
-Added Living Atlas layers are **session-only**: they stream live from Esri's
+The workaround is an **opaque handle**: the search tool caches its hits and returns a
+numbered list (`1, 2, 3…`) with title, summary, and type; the add tool takes a
+**number**, which is resolved back to the real item ID from the cache
+([`addLivingAtlasByHandle`](src/utils/livingAtlas.ts)) before the layer is added. The
+model never sees or types an item ID, duplicate titles are disambiguated by number,
+and ID hallucination is structurally impossible.
+
+Added Living Atlas layers are **session-only**: they stream live from their host
 servers and clear on refresh; nothing is copied into the app or persisted to the
-web map.
+web map. The add step re-checks the item type and fails gracefully for
+subscription-only or unavailable layers.
+
+> **Branches:** `main` runs the full live Living Atlas search described above. The
+> [`ngs-demo-branch`](https://github.com/valdesrosier/arcgis-aicomponents-hurricanerisk-demoapp/tree/ngs-demo-branch)
+> preserves the earlier demo version, whose Living Atlas agent adds from a small
+> hand-curated catalog of vetted layers instead.
 
 ## Configuration
 

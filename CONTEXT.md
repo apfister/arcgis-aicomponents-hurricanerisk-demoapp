@@ -33,11 +33,13 @@ threshold.
 _Avoid_: recommendation agent, lookalike agent
 
 **Living Atlas agent**:
-The custom agent that lets users add curated live Living Atlas layers to the map by
-plain-language request, with a confirm-before-add flow. It searches only the
-**layer catalog**, presents the matching candidates, asks which to add, and adds the
-chosen one after the user confirms.
-_Avoid_: add-layer agent, map agent
+The custom agent that searches the _entire_ ArcGIS Living Atlas live at request time
+and adds a chosen layer to the map, with a confirm-before-add flow. Given a
+plain-language request it queries ArcGIS Online scoped to **Living Atlas layers** of
+mappable types, offers the top matches by relevance as a numbered list, asks which to
+add, and adds the chosen one after the user picks a number. Layers are chosen by
+number, so item IDs never reach the model.
+_Avoid_: add-layer agent, map agent, layer search agent
 
 **Navigate to bookmark agent**:
 The custom agent that flies the map to a saved **bookmark** by plain-language name.
@@ -102,18 +104,23 @@ from the per-hex demographic summary.
 _Avoid_: commonality, overlap, shared demographics
 
 **Living Atlas layer**:
-A live, Esri-hosted layer from ArcGIS Living Atlas that a user can ask to add to the
-map, referenced by its ArcGIS **portal item ID** (so it keeps Esri's authored
-symbology and popups). The features stream from Esri's servers — never copied into
-this app.
+A live layer that carries the ArcGIS **Living Atlas designation** (Esri-curated
+content), referenced by its **portal item ID** so it keeps its authored symbology and
+popups. Ownership is irrelevant — membership is the designation, not the owner. The
+features stream from their host servers — never copied into this app.
 _Avoid_: basemap, dataset, atlas layer
 
-**Layer catalog**:
-The curated in-app list of askable **Living Atlas layers**. Each entry has a portal
-item ID, a display title, and keyword tags. It is the only set the **Living Atlas
-agent** can search or add from — the agent can never invent an item ID or add
-anything outside the catalog.
-_Avoid_: allowlist, registry, layer list
+**Living Atlas designation**:
+The flag that marks an item as part of the ArcGIS Living Atlas of the World. It is the
+sole test for whether a layer counts as a **Living Atlas layer**, independent of who
+owns the item. What the **Living Atlas agent** filters on.
+_Avoid_: authoritative (a separate, broader badge), Esri-owned
+
+**Result handle**:
+The 1-based number the **Living Atlas agent** assigns to each search hit. The user and
+the agent refer to a layer only by its handle; the add step resolves the handle back
+to a **portal item ID** internally, so raw item IDs never reach the model.
+_Avoid_: index, item ID, layer number
 
 **Session layer**:
 A **Living Atlas layer** added at runtime that exists only until page refresh and

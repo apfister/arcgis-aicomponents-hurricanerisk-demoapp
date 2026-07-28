@@ -1,292 +1,41 @@
 import Layer from "@arcgis/core/layers/Layer.js";
 import PortalItem from "@arcgis/core/portal/PortalItem.js";
+import Portal from "@arcgis/core/portal/Portal.js";
+import PortalQueryParams from "@arcgis/core/portal/PortalQueryParams.js";
+import { config } from "../config";
 import type { MapContext } from "./mapContext";
 
-/** One askable Living Atlas layer in the curated catalog. */
-export interface CatalogLayer {
-  /** ArcGIS portal item ID (the live Living Atlas item). */
-  id: string;
-  /** Display title shown to the user. */
+/**
+ * The mappable operational-layer item types the search is restricted to. Web
+ * maps, scenes, tools, notebooks, etc. are excluded so every offered layer can
+ * actually be added to the 2D map via Layer.fromPortalItem.
+ */
+const MAPPABLE_TYPES = [
+  "Feature Service",
+  "Map Service",
+  "Image Service",
+  "Vector Tile Service",
+] as const;
+
+/** How many candidates a single search returns. */
+const MAX_RESULTS = 6;
+
+/**
+ * One search hit offered to the user, referenced by its 1-based `handle`. The
+ * handle — not the portal item ID — is what the add step takes, so item IDs
+ * never reach the language model.
+ */
+export interface LivingAtlasCandidate {
+  handle: number;
   title: string;
-  /** Brief summary from the item's details page, shown to the user. */
-  summary: string;
-  /** Keyword tags used for plain-language matching. */
-  keywords: string[];
-  /** Optional caveat surfaced to the user (e.g. subscription requirement). */
-  note?: string;
+  snippet: string;
+  type: string;
 }
 
-/**
- * The curated set of Living Atlas layers the assistant may search and add.
- * Each entry points at a live Esri-hosted item by portal item ID, so it keeps
- * the authored symbology and popups. This list is the ONLY thing the agent can
- * add — it can never invent an item ID.
- */
-export const LIVING_ATLAS_CATALOG: CatalogLayer[] = [
-  {
-    id: "248e7b5827a34b248647afb012c58787",
-    title: "Active Hurricanes, Cyclones and Typhoons",
-    summary:
-      "Live forecast positions, tracks, and error cones for active tropical cyclones worldwide, from NOAA/NHC.",
-    keywords: [
-      "active hurricanes",
-      "hurricane",
-      "hurricanes",
-      "cyclone",
-      "cyclones",
-      "typhoon",
-      "typhoons",
-      "tropical storm",
-      "forecast",
-      "cone",
-      "current storms",
-      "live storms",
-    ],
-  },
-  {
-    id: "adfe292a67f8471a9d8230ef93294414",
-    title: "Recent Hurricanes, Cyclones and Typhoons",
-    summary:
-      "Observed positions and tracks for tropical cyclones from the past several days.",
-    keywords: [
-      "recent hurricanes",
-      "hurricane",
-      "cyclone",
-      "typhoon",
-      "tropical storm",
-      "recent storms",
-      "past storms",
-      "storm tracks",
-    ],
-  },
-  {
-    id: "a6134ae01aad44c499d12feec782b386",
-    title: "USA Weather Watches and Warnings",
-    summary:
-      "Current National Weather Service watches, warnings, and advisories across the US.",
-    keywords: [
-      "weather warnings",
-      "watches",
-      "warnings",
-      "advisories",
-      "severe weather",
-      "nws",
-      "alerts",
-      "storm warnings",
-    ],
-  },
-  {
-    id: "e109e8fd9c5a495c813b5cbaee9c7d9b",
-    title: "USA Storm Reports",
-    summary:
-      "Recent NWS storm reports of tornadoes, hail, and damaging wind.",
-    keywords: [
-      "storm reports",
-      "tornado",
-      "hail",
-      "wind",
-      "severe weather",
-      "storm damage",
-    ],
-  },
-  {
-    id: "33820e818ebc4661b01bcd47e5f2a57e",
-    title: "National Weather Service Wind Forecast",
-    summary:
-      "National Digital Forecast Database wind speed and gust predictions.",
-    keywords: [
-      "wind forecast",
-      "wind",
-      "wind gust",
-      "wind speed",
-      "gust",
-      "forecast",
-    ],
-  },
-  {
-    id: "0ec8512ad21e4bb987d7e848d14e7e24",
-    title: "USA Structures",
-    summary:
-      "FEMA/USGS building footprints for structures across the United States.",
-    keywords: [
-      "structures",
-      "buildings",
-      "building footprints",
-      "footprints",
-      "infrastructure",
-      "fema",
-    ],
-  },
-  {
-    id: "ff11eb5b930b4fabba15c47feb130de4",
-    title: "World Traffic Service",
-    summary:
-      "Near real-time traffic speeds and reported incidents worldwide.",
-    keywords: [
-      "traffic",
-      "congestion",
-      "traffic incidents",
-      "roads",
-      "transportation",
-      "real-time traffic",
-    ],
-    note: "Requires an ArcGIS organizational subscription to display.",
-  },
-  {
-    id: "11955f1b47ec41a3af86650824e0c634",
-    title: "USA Flood Hazard Areas",
-    summary:
-      "FEMA National Flood Hazard Layer showing floodplains and special flood hazard areas.",
-    keywords: [
-      "flood",
-      "flooding",
-      "flood hazard",
-      "flood zones",
-      "floodplain",
-      "sfha",
-      "flood insurance",
-      "fema",
-    ],
-    note: "Requires an ArcGIS organizational subscription; display-only raster (not clickable features).",
-  },
-  {
-    id: "d053e72aabfd4c5ab4139c3829c1e11c",
-    title: "Historical Hurricane Tracks",
-    summary:
-      "Historical tropical cyclone tracks (lines) from NOAA IBTrACS, 1842 to present.",
-    keywords: [
-      "historical hurricanes",
-      "hurricane tracks",
-      "past hurricanes",
-      "tropical cyclone",
-      "typhoon",
-      "noaa",
-      "ibtracs",
-      "storm tracks",
-    ],
-  },
-  {
-    id: "9da4eeb936544335a6db0cd7a8448a51",
-    title: "National Risk Index (Census Tracts)",
-    summary:
-      "FEMA National Risk Index by census tract: 18 natural hazards, expected annual loss, and social vulnerability.",
-    keywords: [
-      "national risk index",
-      "nri",
-      "natural hazard risk",
-      "risk index",
-      "social vulnerability",
-      "expected annual loss",
-      "community resilience",
-      "fema",
-      "hazard risk",
-    ],
-  },
-  {
-    id: "e75412d18bdc469dbf89bf7e929475cc",
-    title: "Tornado Tracks",
-    summary: "NOAA tornado tracks across the US, 1950 to present.",
-    keywords: [
-      "tornado",
-      "tornado tracks",
-      "tornadoes",
-      "severe weather",
-      "noaa",
-    ],
-  },
-  {
-    id: "5b564bbefa2c482982de7f092dc4f9c9",
-    title: "Recent Earthquakes (USGS)",
-    summary:
-      "USGS live feed of earthquakes from the past 30 days, styled by magnitude.",
-    keywords: [
-      "earthquake",
-      "earthquakes",
-      "recent earthquakes",
-      "seismic",
-      "shakemap",
-      "usgs",
-      "tremor",
-    ],
-  },
-  {
-    id: "79461a1ec0974301bde274177c7108bd",
-    title: "Global Earthquake Archive",
-    summary:
-      "USGS archive of magnitude 4.0+ earthquakes worldwide since 1900.",
-    keywords: [
-      "earthquake",
-      "earthquakes",
-      "historical earthquakes",
-      "earthquake archive",
-      "seismic",
-      "usgs",
-    ],
-  },
-  {
-    id: "8f5deec9956e4a8cb1f13dfd8c0232db",
-    title: "Standardized Precipitation Index (Drought)",
-    summary:
-      "Standardized Precipitation Index showing recent drought and wet conditions.",
-    keywords: [
-      "drought",
-      "precipitation",
-      "spi",
-      "standardized precipitation index",
-      "dry conditions",
-      "rainfall",
-    ],
-  },
-];
-
-const CATALOG_BY_ID = new Map(LIVING_ATLAS_CATALOG.map((c) => [c.id, c] as const));
-
-/**
- * Resolves a catalog entry from a title the assistant offered the user. Matches
- * case-insensitively, exact first, then a unique substring match.
- */
-export function findCatalogByTitle(title: string): CatalogLayer | undefined {
-  const needle = title.toLowerCase().trim();
-  const exact = LIVING_ATLAS_CATALOG.find(
-    (c) => c.title.toLowerCase() === needle,
-  );
-  if (exact) return exact;
-  const partial = LIVING_ATLAS_CATALOG.filter(
-    (c) => c.title.toLowerCase().includes(needle) || needle.includes(c.title.toLowerCase()),
-  );
-  return partial.length === 1 ? partial[0] : undefined;
-}
-
-/**
- * Keyword-matches a plain-language request against the catalog. Returns the
- * best-scoring entries, or the whole catalog when nothing matches (so the agent
- * can offer what's available instead of dead-ending).
- */
-export function searchCatalog(query: string): CatalogLayer[] {
-  const q = query.toLowerCase().trim();
-  const terms = q.split(/[^a-z0-9]+/).filter((t) => t.length > 2);
-
-  const scored = LIVING_ATLAS_CATALOG.map((entry) => {
-    const haystack = [entry.title, ...entry.keywords].join(" ").toLowerCase();
-    let score = 0;
-    if (q && haystack.includes(q)) score += 2;
-    for (const term of terms) if (haystack.includes(term)) score += 1;
-    return { entry, score };
-  })
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map((s) => s.entry);
-
-  return scored.length > 0 ? scored : LIVING_ATLAS_CATALOG;
-}
-
-/** Finds a catalog layer already on the map (dedupe by portal item ID). */
-function findLayerOnMap(ctx: MapContext, id: string) {
-  return ctx.view.map?.layers.find((layer) => {
-    const portalItem = (layer as unknown as { portalItem?: { id?: string } })
-      .portalItem;
-    return portalItem?.id === id;
-  });
+/** The outcome of a Living Atlas search. */
+export interface LivingAtlasSearchResult {
+  candidates: LivingAtlasCandidate[];
+  total: number;
 }
 
 /** The outcome of an add request, as a message for the assistant to relay. */
@@ -296,19 +45,83 @@ export interface AddLayerResult {
 }
 
 /**
- * Adds a catalog layer to the map as a live, session-only layer (cleared on
- * refresh, never persisted to the web map). Only IDs in the catalog can be
- * added; duplicates are ignored.
+ * The last search's hits, keyed by handle. This is the opaque-handle cache: the
+ * search tool fills it and returns numbered candidates; the add tool resolves a
+ * handle back to a real item ID here. Its lifetime is the agent/session.
  */
-export async function addCatalogLayer(
+let lastResults = new Map<number, { id: string; title: string; type: string }>();
+
+let sharedPortal: Portal | null = null;
+function getPortal(): Portal {
+  if (!sharedPortal) {
+    sharedPortal = new Portal({ url: config.portalUrl });
+  }
+  return sharedPortal;
+}
+
+/**
+ * Searches the entire ArcGIS Living Atlas live for mappable layers matching a
+ * plain-language request. Scoped to Living Atlas content
+ * (`groupdesignations:livingatlas`, owner-independent) and to mappable layer
+ * types, ordered by relevance. Caches the hits by handle for a later add.
+ */
+export async function searchLivingAtlas(
+  query: string,
+): Promise<LivingAtlasSearchResult> {
+  const text = query.trim();
+  const typeFilter = MAPPABLE_TYPES.map((t) => `type:"${t}"`).join(" OR ");
+  const q = `${text} groupdesignations:livingatlas (${typeFilter})`;
+
+  const portal = getPortal();
+  await portal.load();
+  // No sortField => relevance order (best text match first).
+  const params = new PortalQueryParams({ query: q, num: MAX_RESULTS });
+  const result = await portal.queryItems(params);
+
+  lastResults = new Map();
+  const candidates: LivingAtlasCandidate[] = [];
+  for (const item of result.results) {
+    if (!item.id) continue;
+    const handle = candidates.length + 1;
+    const title = item.title ?? "Untitled";
+    const type = item.type ?? "";
+    lastResults.set(handle, { id: item.id, title, type });
+    candidates.push({ handle, title, snippet: item.snippet ?? "", type });
+  }
+  return { candidates, total: result.total };
+}
+
+/** Finds a layer already on the map (dedupe by portal item ID). */
+function findLayerOnMap(ctx: MapContext, id: string) {
+  return ctx.view.map?.layers.find((layer) => {
+    const portalItem = (layer as unknown as { portalItem?: { id?: string } })
+      .portalItem;
+    return portalItem?.id === id;
+  });
+}
+
+/**
+ * Adds the candidate identified by `handle` (from the most recent search) to the
+ * map as a live, session-only layer: cleared on refresh, never persisted. Placed
+ * just below the hex embeddings layer so that stays on top and selectable.
+ * Re-checks the item type and fails gracefully for subscription-only or
+ * unavailable layers.
+ */
+export async function addLivingAtlasByHandle(
   ctx: MapContext,
-  layerId: string,
+  handle: number,
 ): Promise<AddLayerResult> {
-  const entry = CATALOG_BY_ID.get(layerId);
+  const entry = lastResults.get(handle);
   if (!entry) {
     return {
       ok: false,
-      message: `"${layerId}" is not in the Living Atlas catalog, so it can't be added.`,
+      message: `There's no option #${handle} in the last search. Ask the user to pick one of the listed numbers.`,
+    };
+  }
+  if (!(MAPPABLE_TYPES as readonly string[]).includes(entry.type)) {
+    return {
+      ok: false,
+      message: `"${entry.title}" isn't a mappable layer, so it can't be added to the map.`,
     };
   }
   if (!ctx.view.map) {
@@ -322,8 +135,6 @@ export async function addCatalogLayer(
     const layer = await Layer.fromPortalItem({
       portalItem: new PortalItem({ id: entry.id }),
     });
-    // Place the layer just below the hex embeddings layer (which must stay on
-    // top so it remains selectable) but above the other operational layers.
     const map = ctx.view.map;
     const hexIndex = map.layers.indexOf(ctx.hexLayer);
     if (hexIndex >= 0) {
@@ -331,8 +142,7 @@ export async function addCatalogLayer(
     } else {
       map.add(layer);
     }
-    const note = entry.note ? ` Note: ${entry.note}` : "";
-    return { ok: true, message: `Added "${entry.title}" to the map.${note}` };
+    return { ok: true, message: `Added "${entry.title}" to the map.` };
   } catch (err) {
     console.error("[living-atlas] add failed:", err);
     return {
