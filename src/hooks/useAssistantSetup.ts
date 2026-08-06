@@ -11,6 +11,7 @@ import { createDemographicsAgent } from "../agents/demographicsAgent";
 import { createLivingAtlasAgent } from "../agents/livingAtlasAgent";
 import { createBookmarkAgent } from "../agents/bookmarkAgent";
 import { createMcpAgent } from "../agents/mcpAgent";
+import { config } from "../config";
 import {
   getSelection,
   subscribeSelection,
@@ -56,11 +57,11 @@ export function useAssistantSetup(enabled: boolean) {
     const cleanups: Array<() => void> = [];
 
     (async () => {
-      // Built-in and MCP agents don't depend on the hex-bin layer, so attach
-      // them first. This guarantees the assistant always has agents even if the
-      // map context (find-similar) can't be resolved.
+      // Built-in agents don't depend on the hex-bin layer, so attach them first.
       cleanups.push(registerBuiltInAgents(assistant));
-      cleanups.push(await registerMcpAgent(assistant));
+      if (config.mcpEnabled) {
+        cleanups.push(await registerMcpAgent(assistant));
+      }
       if (cancelled) return;
 
       let ctx: MapContext;
@@ -68,7 +69,7 @@ export function useAssistantSetup(enabled: boolean) {
         ctx = await resolveMapContext(map);
       } catch (err) {
         console.error(
-          "Find-similar setup failed (built-in + MCP agents still active):",
+          "Find-similar setup failed (independent agents remain active):",
           err,
         );
         return;

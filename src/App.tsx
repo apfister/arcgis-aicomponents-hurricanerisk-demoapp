@@ -125,7 +125,9 @@ export default function App() {
               entry-message="Welcome to the Florida Hurricane Risk Explorer! I'm your Map Assistant. I can find similar geodemographic areas, describe an area's demographics, add live Living Atlas layers, and zoom to your bookmarks — just ask."
             />
           </div>
-          {showMcp && <HubServerManager onClose={() => setShowMcp(false)} />}
+          {config.mcpEnabled && showMcp && (
+            <HubServerManager onClose={() => setShowMcp(false)} />
+          )}
           {showInfo && (
             <div className="mcp-panel info-panel">
               <div className="mcp-panel__header">
@@ -160,16 +162,18 @@ export default function App() {
                       ? "Retry embeddings"
                       : "Generate map embeddings"}
                 </calcite-button>
-                <calcite-button
-                  width="full"
-                  appearance="outline-fill"
-                  onClick={() => {
-                    setShowMcp(true);
-                    setShowInfo(false);
-                  }}
-                >
-                  MCP servers
-                </calcite-button>
+                {config.mcpEnabled && (
+                  <calcite-button
+                    width="full"
+                    appearance="outline-fill"
+                    onClick={() => {
+                      setShowMcp(true);
+                      setShowInfo(false);
+                    }}
+                  >
+                    MCP servers
+                  </calcite-button>
+                )}
               </div>
             </div>
           )}

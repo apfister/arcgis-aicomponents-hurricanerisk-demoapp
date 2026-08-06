@@ -9,6 +9,7 @@ export const config = {
   hexLayerTitle: import.meta.env.VITE_HEX_LAYER_TITLE || "",
   demographicsLayerTitle: import.meta.env.VITE_DEMOGRAPHICS_LAYER_TITLE || "",
   hexKeyField: import.meta.env.VITE_HEX_KEY_FIELD || "",
+  mcpEnabled: import.meta.env.VITE_ENABLE_MCP !== "false",
   mcpBaseUrl: import.meta.env.VITE_MCP_BASE_URL || "/api/mcp",
 } as const;
 
