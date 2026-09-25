@@ -1,9 +1,6 @@
 name: Publish reviewed Hurricane to NGL
 
 on:
-  push:
-    branches: [nglabs-hosting]
-    paths: [.github/workflows/ngl-publish.yml, .github/ngl/**]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +17,7 @@ jobs:
     environment: ngl-production
     permissions:
       contents: read
+      actions: read
       id-token: write
     env:
       NGL_SOURCE_COMMIT: abb7d335572bcb1d7118205228b99de8176b0caf
@@ -37,28 +35,15 @@ jobs:
           ref: abb7d335572bcb1d7118205228b99de8176b0caf
           path: reviewed-source
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: reviewed-source/package-lock.json
-      - name: Build the reviewed root-path static application
-        working-directory: reviewed-source
+      - name: Retrieve the exact retained Hurricane build
         env:
-          VITE_ARCGIS_OAUTH_APP_ID: wCgs4CfaXN4X3kbe
-          VITE_ENABLE_MCP: 'false'
-          VITE_PORTAL_URL: https://www.arcgis.com
-          VITE_WEBMAP_ITEM_ID: 4eb8b044f8534f14b893b43d8d66a992
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$NGL_SOURCE_COMMIT"
-          test -z "$(git status --porcelain)"
-          for file in .env .env.local .env.production .env.production.local; do
-            test ! -e "$file"
-          done
-          npm ci
-          npm run build -- --base=/
-      - name: Package and publish with genuine GitHub Actions OIDC
+          gh run download 36150471752 \
+            --repo apfister/arcgis-aicomponents-hurricanerisk-demoapp \
+            --name hurricane-ngl-36150471752-1 --dir ngl-retained
+      - name: Publish the unchanged Artifact with genuine GitHub Actions OIDC
         run: python3 .github/ngl/publish.py
       - name: Retain repeatable publication artifacts
         if: always()
