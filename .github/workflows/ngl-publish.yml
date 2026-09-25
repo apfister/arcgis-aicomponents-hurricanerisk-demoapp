@@ -1,0 +1,70 @@
+name: Publish reviewed Hurricane to NGL
+
+on:
+  push:
+    branches: [nglabs-hosting]
+    paths: [.github/workflows/ngl-publish.yml, .github/ngl/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ngl-hurricane-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: ngl-production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      NGL_SOURCE_COMMIT: abb7d335572bcb1d7118205228b99de8176b0caf
+      NGL_APPLICATION_ID: 2a9acadc-9644-4cfe-8343-c77079126034
+      NGL_PUBLISHER_ID: ${{ vars.NGL_PUBLISHER_ID }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject application payload drift
+        run: git diff --exit-code "$NGL_SOURCE_COMMIT" "$GITHUB_SHA" -- . ':(exclude).github'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: abb7d335572bcb1d7118205228b99de8176b0caf
+          path: reviewed-source
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: reviewed-source/package-lock.json
+      - name: Build the reviewed root-path static application
+        working-directory: reviewed-source
+        env:
+          VITE_ARCGIS_OAUTH_APP_ID: wCgs4CfaXN4X3kbe
+          VITE_ENABLE_MCP: 'false'
+          VITE_PORTAL_URL: https://www.arcgis.com
+          VITE_WEBMAP_ITEM_ID: 4eb8b044f8534f14b893b43d8d66a992
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$NGL_SOURCE_COMMIT"
+          test -z "$(git status --porcelain)"
+          for file in .env .env.local .env.production .env.production.local; do
+            test ! -e "$file"
+          done
+          npm ci
+          npm run build -- --base=/
+      - name: Package and publish with genuine GitHub Actions OIDC
+        run: python3 .github/ngl/publish.py
+      - name: Retain repeatable publication artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hurricane-ngl-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ngl-publication/
+          if-no-files-found: error
+          retention-days: 30
